@@ -1,0 +1,1 @@
+<?php require_once '/usr/parsers/lib/parser.php';
