@@ -1,5 +1,4 @@
-.idea/*
-*.sublime-project
-*.sublime-workspace
-/*/logs/*
-conf.php
+*
+!/example/*
+!/lib/*
+!/README.MD
