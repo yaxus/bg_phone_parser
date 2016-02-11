@@ -1,4 +1,4 @@
-*
-!/example/*
-!/lib/*
+/*
+!/example
+!/lib
 !/README.MD
