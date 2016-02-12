@@ -9,11 +9,11 @@
 
  Запуск парсера из командной строки:
  ```sh
- # php ./parser/execute.php
+ php ./parser/execute.php
  ```
  Справка параметров запуска:
  ```sh
- # php ./example/execute.php -h
+ php ./example/execute.php -h
  use:
  <-y YYYY> - Year;
  <-m MM>   - Month;
