@@ -42,7 +42,7 @@ if (isset($o['h']))
 		'[-c CC]   - Count days;',
 		'[-t]      - Today (if isset, other values not used);',
 		'[-h]      - This help.',
-	]);
+	]).PHP_EOL;
 	return;
 }
 elseif(isset($o['t']))
