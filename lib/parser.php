@@ -1,4 +1,6 @@
-<?php namespace local;
+<?php
+
+namespace local;
 
 /**
  * Инициирование процесса обработки CDR из коммандной строки.
@@ -47,7 +49,7 @@ if (isset($o['h']))
 }
 elseif(isset($o['t']))
 {   // today
-	$converter = new CDRConverter_Converter($config);
+	$converter = new CDRConverter_Parser($config);
 	$converter->treat(date($config['date_frmt'], $time_today));
 	return;
 }
@@ -74,7 +76,6 @@ else
 	$time_start = $time_today-$period_try*86400;
 }
 
-$date_start = date($config['date_frmt'], $time_start);
 $y = date('Y', $time_start);
 $m = date('n', $time_start);
 $d = date('j', $time_start)+$period_try;

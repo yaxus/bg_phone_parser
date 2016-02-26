@@ -4,7 +4,7 @@
 
 class PipeFile
 {
-	protected $data = array();
+	protected $data = [];
 	protected $file_name;
 	protected $quantity_rows = 0;
 	protected $file_writable = FALSE;

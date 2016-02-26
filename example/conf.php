@@ -1,9 +1,9 @@
-<?php return array(
+<?php return [
 	// process
-	'processed_files' => array(
+	'processed_files' => [
 		'file_name'     => 'processed_files.php', // pipe file
 		'count_history' => 100,
-	),
+	],
 	'timezone'      => 'Europe/Moscow', // time zone
 	'period_try'    => 7,               // try download days 
 	'check_pipe'    => TRUE,            // skip day if is olready processed
@@ -12,19 +12,19 @@
 	'date_frmt'     => 'Y-m-d',
 
 	// object
-	'source_id'     => 6,
-	'pass_zero_dur' => TRUE,
+	'source_id'     => 1,
+	'pass_zero_dur' => TRUE,			// pass CDR where duration = 0
 	'conv_dir'      => '/usr/ftpuni/converted/',
 	'stream_socket' => 'tcp://0.0.0.0:9033',
 
-	'sources' => array(
-		array(
+	'sources' => [
+		[
 			'obj_cdr'       => 'local\CDRRTU',
 			'raw_dir'       => '/usr/ftprtu/',
 			'pattern_files' => '\r\t\uYmd\*',   // converted with date()
-			'count_raw'     => array(13,15),
+			'count_raw'     => [13,15],
 			'delimiter'     => ';',
-			'indexes'       => array(
+			'indexes'       => [
 				'datet'      => 9,
 				'duration'   => 7,
 				'A'          => 5,
@@ -36,8 +36,8 @@
 				'category'   => NULL,
 				'dur_oper'   => NULL,
 				'coast'      => NULL,
-			),
-		),
+			],
+		],
 		// ... other sources
-	),
-);
+	],
+];

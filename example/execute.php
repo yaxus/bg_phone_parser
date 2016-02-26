@@ -1,1 +1,1 @@
-<?php require_once '/usr/parsers/lib/parser.php';
+<?php require_once realpath(dirname(__FILE__).'/../lib').'/parser.php';

@@ -4,7 +4,7 @@ class CDRSMG extends CDRUNIAbstract
 {
 	protected $port_pref  = 's';
 
-	protected $conv_func  = array(
+	protected $conv_func  = [
 		'port2str',
 		'skip_inner_calls',
 		'skip_pref_1xxx',   // такой номерной емкости нет, стоит автоответчик beeline, используется для внутренних целей, до 31.10.2015
@@ -12,12 +12,12 @@ class CDRSMG extends CDRUNIAbstract
 		'redirected_nums',
 		'dn_numbers',
 		'check_international',
-		'num2e164',
+		'nums2e164',
 		'a_num2port',
 		'combination_nums',
-	);
+	];
 
-	protected $term_alias = array(
+	protected $term_alias = [
 		// Operators
 		'Orange'   => 1,
 		'Beeline'  => 2,
@@ -34,13 +34,13 @@ class CDRSMG extends CDRUNIAbstract
 		'РН-Информ' => 10,
 		'RCN'       => 11,
 		'PCC'       => 11,
-	);
+	];
 
 	protected function skip_pref_1xxx()
 	{
 		if ($this->time() > mktime(0,0,0,10,31,2015))
 			return TRUE;
-		$a_num = $this->get('B');
+		$a_num = $this->B;
 		if (preg_match("/^1[^0]\d{8}$/", $a_num))
 			$this->skip_cdr(TRUE);
 	}
@@ -52,7 +52,7 @@ class CDRSMG extends CDRUNIAbstract
 			return TRUE;
 		$this->redir_status = TRUE;
 		// Исходящий переадресующий номер
-		$this->set('A', $redir);
+		$this->A = $redir;
 	}
 
 	protected function dn_numbers()
@@ -60,11 +60,11 @@ class CDRSMG extends CDRUNIAbstract
 		// $this->raw_arr[8] - номер вызывающего абонента на входе;
 		if ($this->redir_status === TRUE)
 			return TRUE;
-		$a_num_in = $this->_num2e164($this->raw_arr[8]); 
+		$a_num_in = static::num2e164($this->raw_arr[8]);
 		
 		if (preg_match("/^\d?(49[589]\d{7})(\d+)$/", $a_num_in, $mch))
 		{
-			$this->set('A', $mch[1]);
+			$this->A = $mch[1];
 			$this->val_ext['num_dn'] = $mch[2];
 		}
 		elseif (preg_match("/^\d{4,6}$/", $a_num_in))
@@ -78,13 +78,21 @@ class CDRSMG extends CDRUNIAbstract
 			$this->international = TRUE;
 	}
 
+	//protected function num2e164_2()
+	//{
+	//	$this->A164 = $this->_num2e164($this->A);
+	//	$this->B164 = ($this->international !== TRUE)
+	//		? $this->_num2e164($this->val['B'])
+	//		: $this->val['B'];
+	//}
+
 	protected function a_num2port()
 	{
-		$a_num = $this->get('A164');
+		$a_num = $this->A164;
 		if ( ! empty($this->a_num2port[$a_num]) AND ! $this->port_is_outer('port_from'))
 		{
 			// меняем port_from для учета вызова в биллинге по транку клиента
-			$this->set('port_from', $this->trunk_indexes[$this->a_num2port[$a_num]]);
+			$this->port_from = $this->trunk_indexes[$this->a_num2port[$a_num]];
 		}
 	}
 }
