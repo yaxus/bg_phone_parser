@@ -13,7 +13,7 @@ namespace local;
 // load environment
 define('DOCROOT', realpath(dirname($_SERVER['SCRIPT_NAME'])).DIRECTORY_SEPARATOR);
 define('CONFPATH', DOCROOT.'conf.php');
-define('LIBROOT', DOCROOT.'..'.DIRECTORY_SEPARATOR.'lib'.DIRECTORY_SEPARATOR);
+define('LIBROOT', realpath(DOCROOT.'..').DIRECTORY_SEPARATOR.'lib'.DIRECTORY_SEPARATOR);
 require_once LIBROOT.'Autoloader.php';
 
 if (realpath($_SERVER['SCRIPT_NAME']) === realpath(__FILE__))

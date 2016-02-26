@@ -70,6 +70,7 @@ abstract class CDRConverter_CDR
 
 	private function init_new_cdr()
 	{
+		// TODO file_num_str устанавливать методом
 		$this->file_num_str++;
 		$this->redir_status  = FALSE;
 		//$this->international = FALSE;
@@ -98,6 +99,8 @@ abstract class CDRConverter_CDR
 		return FALSE;
 	}
 
+
+	// TODO !!! Вынести в отдельный класс Converter
 	private function _converting()
 	{
 		$this->base_init();

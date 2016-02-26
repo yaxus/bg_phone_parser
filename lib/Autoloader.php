@@ -2,5 +2,6 @@
 require LIBROOT.'vendor/SplClassLoader.php';
 $localLoader = new SplClassLoader('local', LIBROOT);
 $localLoader->register();
-$vendorLoader = new SplClassLoader(NULL, LIBROOT.'vendor');
+$vendorLoader = new SplClassLoader(NULL, LIBROOT.'vendor/');
 $vendorLoader->register();
+var_dump(spl_autoload_functions()); exit;
