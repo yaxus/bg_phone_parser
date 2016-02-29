@@ -1,6 +1,6 @@
 <?php namespace local; defined('CONFPATH') or die('No direct script access.');
 
-class CDRRTU8800 extends CDRConverter_CDR
+class CDRRTU8800 extends CDRConverter_Converter
 {
 	protected $conv_func  = array(
 		'revers_nums',

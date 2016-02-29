@@ -12,22 +12,22 @@ class Log
 	public function __construct($dir = NULL, $level = NULL)
 	{
 		if ( ! empty($dir))
-			Log::$dir = $dir;
+			self::$dir = $dir;
 		if ( ! empty($level))
 		{
 			$lev = strtoupper($level);
-			Log::$level = constant("Psr\Log\LogLevel::{$lev}");
+			self::$level = constant("Psr\Log\LogLevel::{$lev}");
 		}
-		$this->instance();
+		$this->_instance();
 	}
 
 	public static function instance()
 	{
-		if ( ! isset(Log::$_instance))
+		if ( ! isset(self::$_instance))
 		{
 			// Create a new Log instance
-			Log::$_instance = new Logger(Log::$dir, Log::$level);
+			self::$_instance = new Logger(self::$dir, self::$level);
 		}
-		return Log::$_instance;
+		return self::$_instance;
 	}
 }

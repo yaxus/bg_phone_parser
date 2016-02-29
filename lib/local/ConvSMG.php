@@ -1,6 +1,6 @@
 <?php namespace local; defined('CONFPATH') or die('No direct script access.');
 
-class CDRSMG extends CDRUNIAbstract
+class CDRSMG extends ConvUNIAbstract
 {
 	protected $port_pref  = 's';
 
@@ -42,12 +42,12 @@ class CDRSMG extends CDRUNIAbstract
 			return TRUE;
 		$a_num = $this->B;
 		if (preg_match("/^1[^0]\d{8}$/", $a_num))
-			$this->skip_cdr(TRUE);
+			$this->is_skipped(TRUE);
 	}
 
 	protected function redirected_nums()
 	{
-		$redir = $this->raw_get(13);
+		$redir = $this->getRaw(13);
 		if (empty($redir))
 			return TRUE;
 		$this->redir_status = TRUE;
@@ -65,15 +65,15 @@ class CDRSMG extends CDRUNIAbstract
 		if (preg_match("/^\d?(49[589]\d{7})(\d+)$/", $a_num_in, $mch))
 		{
 			$this->A = $mch[1];
-			$this->val_ext['num_dn'] = $mch[2];
+			$this->val_other['num_dn'] = $mch[2];
 		}
 		elseif (preg_match("/^\d{4,6}$/", $a_num_in))
-			$this->val_ext['num_dn'] = $a_num_in;
+			$this->val_other['num_dn'] = $a_num_in;
 	}
 
 	protected function check_international()
 	{
-		$b_num_in = $this->raw_get(17); // Входящий B номер
+		$b_num_in = $this->getRaw(17); // Входящий B номер
 		if (substr($b_num_in, 0, 3) == '810')
 			$this->international = TRUE;
 	}

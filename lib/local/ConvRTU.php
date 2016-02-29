@@ -1,6 +1,6 @@
 <?php namespace local; defined('CONFPATH') or die('No direct script access.');
 
-class CDRRTU extends CDRUNIAbstract
+class ConvRTU extends ConvUNIAbstract
 {
 	protected $port_pref = 'r';
 
@@ -49,7 +49,7 @@ class CDRRTU extends CDRUNIAbstract
 
 	protected function redirected_nums()
 	{
-		$redir = $this->raw_get(14);
+		$redir = $this->cdr->getRaw(14);
 		if (empty($redir))
 			return TRUE;
 		$this->redir_status === TRUE;
@@ -70,11 +70,11 @@ class CDRRTU extends CDRUNIAbstract
 		if (preg_match("/^\d?(49[589]\d{7})(\d+)$/", $a_num, $mch))
 		{
 			$this->A = $mch[1];
-			$this->val_ext['num_dn'] = $mch[2];
+			$this->val_other['num_dn'] = $mch[2];
 		}
 		elseif (preg_match("/^\d{4,6}$/", $a_num))
 		{
-			$this->val_ext['num_dn'] = $a_num;
+			$this->val_other['num_dn'] = $a_num;
 			$this->A = static::num2e164($this->raw_arr[11]); // Исходящий А-номер (НЕ поле для биллинга)
 		}
 
@@ -100,10 +100,10 @@ class CDRRTU extends CDRUNIAbstract
 
 	protected function not_skip_cdr_int_nums()
 	{
-		if ($this->time() > mktime(0,0,0,10,23,2015))
+		if ($this->cdr->time() > mktime(0,0,0,10,23,2015))
 			return TRUE;
 		if (in_array($this->port_from, array('@Avtosnabjenets', '@Neftegarant')))
-			$this->skip_cdr(FALSE);
+			$this->is_skipped(FALSE);
 	}
 
 }

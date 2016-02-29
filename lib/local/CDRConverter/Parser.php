@@ -1,6 +1,7 @@
 <?php
 
 namespace local;
+
 use ZipArchive;
 
 defined('CONFPATH') or die('No direct script access.');
@@ -15,10 +16,10 @@ class CDRConverter_Parser
 	private $time_day_end;
 	private $raw_files     = [];
 	
-	private $source_id;
+	private $bg_source_id;
+	private $bg_stream_socket;
 	private $conv_dir;
 	private $skip_zero_dur = TRUE;
-	private $stream_socket;
 	private $trunk_indexes;
 	private $dublicates = [];
 	private $dublicates_limit = 100;
@@ -28,23 +29,25 @@ class CDRConverter_Parser
 
 	private $isset_err     = FALSE;
 	private $conf_params   = [
-		'source_id',
+		'bg_source_id',
+		'bg_stream_socket',
 		'conv_dir',
-		'pass_zero_dur',
-		'stream_socket',
-		'trunk_indexes',
 		'skip_zero_dur',
+		'trunk_indexes',
 		'debug',
 	];
 
-	private $source_params = [
-		'obj_cdr',
-		'raw_dir',
-		'pattern_files',
-		'count_raw',
-		'delimiter',
-		'indexes',
-	];
+	// TODO -> Source
+	//private $source_params = [
+	//	'raw_dir',
+	//	'pattern_files',
+	//	'skip_first_rows',
+
+	//	'obj_converter',
+	//	'count_raw',
+	//	'delimiter',
+	//	'indexes',
+	//];
 
 	private $sources       = [];
 
@@ -53,11 +56,10 @@ class CDRConverter_Parser
 	{
 		$this->set_params($conf);
 
-		if ( ! isset($conf['sources']))
-			$this->set_source_params($conf);
+		if ( ! isset($conf['sources']) OR ! is_array($conf['sources']))
+			Log::instance()->error("Parameter: 'sources' is not set or is not array.");
 		else
-			foreach ($conf['sources'] as $key => $source)
-				$this->set_source_params($source, $key);
+			$this->sources = $conf['sources'];
 	}
 
 	protected function set_params($arr)
@@ -72,21 +74,21 @@ class CDRConverter_Parser
 				$this->{$param} = $arr[$param];
 	}
 
-	protected function set_source_params($arr, $key_source = 0)
-	{
-		$src = [];
-		foreach ($this->source_params as $param)
-		{
-			if (empty($arr[$param]))
-			{
-				Log::instance()->error("Source parameter #{$key_source}: {$param} is not set.");
-				$this->isset_err = TRUE;
-			}
-			else
-				$src[$param] = $arr[$param];
-		}
-		$this->sources[$key_source] = $src;
-	}
+	//protected function set_source_params($arr, $key_source = 0)
+	//{
+	//	$src = [];
+	//	foreach ($this->source_params as $param)
+	//	{
+	//		if (empty($arr[$param]))
+	//		{
+	//			Log::instance()->error("Source parameter #{$key_source}: {$param} is not set.");
+	//			$this->isset_err = TRUE;
+	//		}
+	//		else
+	//			$src[$param] = $arr[$param];
+	//	}
+	//	$this->sources[$key_source] = $src;
+	//}
 
 	public function treat($date)
 	{
@@ -102,7 +104,11 @@ class CDRConverter_Parser
 		$this->cdr_data = array_fill(0, 24, array());
 
 		foreach ($this->sources as $src_cfg)
-			$this->treat_source($src_cfg);
+		{
+			//$this->treat_source($src_cfg);
+			$source = new CDRConverter_Source($src_cfg, $this->time_day_start);
+			$source->exec();
+		}
 
 		Log::instance()->debug("End CDR coverter process.");
 
@@ -113,56 +119,6 @@ class CDRConverter_Parser
 			return $this->send_command_load($this->time_day_start);
 		}
 		return FALSE;
-	}
-	
-	protected function treat_source($src_cfg)
-	{
-		$files = $this->files($src_cfg['raw_dir'], $src_cfg['pattern_files'], $this->time_day_start);
-		$cdr = new $src_cfg['obj_cdr']($src_cfg['delimiter']);
-		$cdr->set_count_raw($src_cfg['count_raw']);
-		$cdr->set_indexes($src_cfg['indexes']);
-		$cdr->set_trunk_indexes($this->trunk_indexes);
-		$cdr->set_skip_zero($this->skip_zero_dur);
-
-		foreach ($files as $f)
-		{
-			if ( ! $this->valid_file($f))
-				continue;
-
-			$cdr->init_new_file($f);
-
-			foreach (file($f) as $key => $raw_string)
-			{
-				$cdr_arr = $cdr->convert($raw_string);
-				// var_dump($raw_string, $res); exit;
-				if ( ! $cdr_arr)
-					continue;
-
-				// Пропускаем нулевую длительность
-				// TODO вынести в CDR
-				if ($this->pass_zero_dur === TRUE AND $cdr_arr['dur_oper'] == 0)
-					continue;
-
-				// Если запись дублируется
-				$this->is_dublicate($cdr->file_num_str(), $cdr_arr);
-				// if ($this->is_dublicate($cdr_arr))
-				// {
-				// 	Log::instance()->info("CDR #{$cdr->file_num_str()} is dublicate");
-				// 	continue;
-				// }
-
-				$time = $cdr->time();
-				if ($time <= $this->time_day_start)
-					$h = 0;
-				elseif ($time >= $this->time_day_end)
-					$h = 23;
-				else
-					$h = (int) date("G", $time);
-
-				$this->cdr_data[$h][] = implode("\t", $cdr_arr);
-			}
-			Log::instance()->info("Processed all: {$cdr->file_num_str()}; Of these skipped: {$cdr->skip_count()}.");
-		}
 	}
 	
 	protected function is_dublicate($num_str, $c)
@@ -194,7 +150,7 @@ class CDRConverter_Parser
 		$load_date = date("Y-m-d", $time_day);
 		for ($h=0;$h<24;$h++)
 		{
-			$fp = stream_socket_client($this->stream_socket, $errno, $errstr, 3); 
+			$fp = stream_socket_client($this->bg_stream_socket, $errno, $errstr, 3);
 			if (! $fp)
 			{
 				Log::instance()->error("$errstr ({$errno})");
@@ -202,8 +158,8 @@ class CDRConverter_Parser
 			}
 			else 
 			{
-				// echo "load={$load_date}-{$h}-{$this->source_id}\n";$cdr_arr['dur_oper']
-				$cmd = "load={$load_date}-{$h}-{$this->source_id}\n";
+				// echo "load={$load_date}-{$h}-{$this->bg_source_id}\n";$cdr_arr['dur_oper']
+				$cmd = "load={$load_date}-{$h}-{$this->bg_source_id}\n";
 				if (fwrite($fp, $cmd))
 					Log::instance()->info("Send command: ".trim($cmd));
 				else
@@ -217,14 +173,6 @@ class CDRConverter_Parser
 		if ( ! empty($err))
 			return FALSE;
 		return TRUE;
-	}
-
-	// !!!
-	public function files($dir, $pattern, $time_day)
-	{
-		// $arr_files = glob($this->raw_dir."rtu".date("Ymd", $time_day)."*");
-		return glob($dir.date($pattern, $time_day));
-		// $this->raw_files = array_merge($this->raw_files, $arr_files);
 	}
 
 	// public function clear_raw_files()
@@ -263,23 +211,5 @@ class CDRConverter_Parser
 		}
 		return TRUE;
 	}
-
-	protected function valid_file($file_name)
-	{
-		// 1. Права на чтение
-		if ( ! is_readable($file_name))
-		{
-			Log::instance()->error("File: {$file_name} is not readable.");
-			return FALSE;
-		}
-		// 2. Не пустой
-		elseif (filesize($file_name) == 0)
-		{
-			Log::instance()->warning("File: {$file_name} is empty.");
-			return FALSE;
-		}
-		return TRUE;
-	}
-
 
 }

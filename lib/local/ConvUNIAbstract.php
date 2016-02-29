@@ -1,6 +1,6 @@
 <?php namespace local; defined('CONFPATH') or die('No direct script access.');
 
-abstract class CDRUNIAbstract extends CDRConverter_CDR
+abstract class ConvUNIAbstract extends CDRConverter_Converter
 {
 	protected $delim_nums = '&';
 	protected $dn_in_a164 = TRUE;
@@ -17,8 +17,14 @@ abstract class CDRUNIAbstract extends CDRConverter_CDR
 		'74995766559' => 13,
 	];
 
-	public function set_trunk_indexes(array $arr)
+	public function __construct()
 	{
+		$this->set_trunk_indexes();
+	}
+
+	public function set_trunk_indexes()
+	{
+		$arr = Cnf::get('trunk_indexes');
 		if (! empty($arr))
 			$this->trunk_indexes = $arr;
 		else
@@ -39,20 +45,20 @@ abstract class CDRUNIAbstract extends CDRConverter_CDR
 		{
 			$key = $this->term_alias[$port_val];
 			$this->$port_type = $this->trunk_indexes[$key];
-			$this->val_ext[$port_type.'_key'] = $key;
-			$this->val_ext[$port_type.'_pref'] = $tp.str_pad($key, 2, '0', STR_PAD_LEFT);
+			$this->val_other[$port_type.'_key'] = $key;
+			$this->val_other[$port_type.'_pref'] = $tp.str_pad($key, 2, '0', STR_PAD_LEFT);
 		}
 		else
 		{
 			$this->$port_type = '_Undef';
-			$this->val_ext[$port_type.'_key'] = 0;
-			$this->val_ext[$port_type.'_pref'] = $tp.'__';
+			$this->val_other[$port_type.'_key'] = 0;
+			$this->val_other[$port_type.'_pref'] = $tp.'__';
 		}
 	}
 
 	protected function port_is_outer($port_type)
 	{
-		$port_key = $this->val_ext[$port_type.'_key'];
+		$port_key = $this->val_other[$port_type.'_key'];
 		if ($port_key > 0 AND $port_key < 10)
 			return TRUE;
 		return FALSE;
@@ -66,19 +72,19 @@ abstract class CDRUNIAbstract extends CDRConverter_CDR
 	protected function skip_inner_calls()
 	{
 		if ( ! $this->port_is_outer('port_from') AND ! $this->port_is_outer('port_to'))
-			$this->skip_cdr(TRUE);
+			$this->cdr->isSkipped(TRUE);
 	}
 
 	protected function combination_nums()
 	{
-		$a_num = [$this->val_ext['port_from_pref'], $this->A];
-		if ( ! empty($this->val_ext['num_dn']))
+		$a_num = [$this->val_other['port_from_pref'], $this->A];
+		if ( ! empty($this->val_other['num_dn']))
 		{
-			$a_num[] = $this->val_ext['num_dn'];
+			$a_num[] = $this->val_other['num_dn'];
 			if ($this->dn_in_a164)
-				$this->A164 = implode($this->delim_nums, [$this->A164, $this->val_ext['num_dn']]);
+				$this->A164 = implode($this->delim_nums, [$this->A164, $this->val_other['num_dn']]);
 		}
-		$b_num = [$this->val_ext['port_to_pref'], $this->B];
+		$b_num = [$this->val_other['port_to_pref'], $this->B];
 		$this->A = implode($this->delim_nums, $a_num);
 		$this->B = implode($this->delim_nums, $b_num);
 	}
