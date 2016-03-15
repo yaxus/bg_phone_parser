@@ -9,7 +9,7 @@ class CDRFlow
 	private   $datet_frmt    = 'd.m.Y H:i:s'; // формат даты и времени в CDR для биллинга
 
 	// "сырые" данные
-	private   $raw_delimiter = ',';           // разделитель полей в текстовой строке
+	private   $raw_delimiter = ',';           // разделитель полей в "сырой" текстовой строке
 	private   $raw_min_count = 4;             // минимальное значение значений в строке
 	private   $raw_count     = [];            // допестимое кол-во значений в строке, может быть несколько значений
 	protected $raw_arr       = [];            // массив всех значений из строки
@@ -17,6 +17,7 @@ class CDRFlow
 	// преобразованные данные
 	private   $val_time;                      // время записи CDR в unix формате
 	private   $val           = [];            // поля со значениями для преобразования
+	private   $val_delimiter = "\t";          // разделитель полей в строке для биллинга
 	private   $val_indexes   = [];            // сопоставление полей индексам в строке
 	//protected $val_other     = [];            // другие поля для внутренних преобразований номеров
 	private   $val_fields    = [              // ассоциативные наименования полей
@@ -193,7 +194,7 @@ class CDRFlow
 	}
 
 	/**
-	 * Значение обработанного поля или все значения
+	 * Вернуть значение обработанного поля или все значения
 	 *
 	 * @param null $field
 	 *
@@ -206,6 +207,10 @@ class CDRFlow
 		if (isset($this->val[$field]))
 			return $this->val[$field];
 		return FALSE;
+	}
+	public function getAsString()
+	{
+		return implode($this->val_delimiter, $this->val);
 	}
 
 	public function getFileName()

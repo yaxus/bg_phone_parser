@@ -6,8 +6,8 @@ class Cnf
 {
 	private static $arr_conf;
 
-	private function __construct(){return FALSE;}
-	private function __clone()    {return FALSE;}
+	private function __construct(){}
+	private function __clone()    {}
 
 	public static function init($file)
 	{

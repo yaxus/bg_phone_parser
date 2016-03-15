@@ -5,24 +5,18 @@ defined('CONFPATH') or die('No direct script access.');
 class Collector
 {
 	private static $instance;
-
-	private $data = [];
-	// TODO перенести в статические переменные
-	private $time_day;
-	private $time_day_end;
+	private        $data = [];
 
 	private function __clone(){}
-	private function __construct($time_day)
+	private function __construct()
 	{
-		$this->data         = array_fill(0, 24, []);
-		$this->time_day     = $time_day;
-		$this->time_day_end = $time_day + 86400;
+		$this->data = array_fill(0, 24, []);
 	}
 
-	public static function init($time_day)
+	public static function init()
 	{
 		if (empty(self::$instance))
-			self::$instance = new self($time_day);
+			self::$instance = new self();
 		return self::$instance;
 	}
 
@@ -30,14 +24,14 @@ class Collector
 	{
 		//var_dump($cdr_flow); exit;
 		$time = $cdr_flow->getTime();
-		if ($time <= $this->time_day)
+		if ($time <= Parser::timeDay())
 			$h = 0;
-		elseif ($time >= $this->time_day_end)
+		elseif ($time >= Parser::timeDayEnd())
 			$h = 23;
 		else
 			$h = (int) date("G", $time);
 
-		$this->data[$h][] = implode("\t", $cdr_flow->get());
+		$this->data[$h][] = $cdr_flow->getAsString();
 	}
 
 	public function getData()

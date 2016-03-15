@@ -4,18 +4,17 @@ defined('CONFPATH') or die('No direct script access.');
 
 class Source
 {
-	//private $time_day_start;
-	//private $time_day_end;
+	private $src_cnf;         // Конфигурация источника
+	private $collector;       // obj Collector
+	private $cdr_flow;        // obj CDRFlow
+	private $raw_dir;         // Директория с файлами для обработки
+	private $pattern_files;   // Шаблон файлов для обработки, задается через date($this->pattern_files, ...)
+	private $files = [];      // Файлы с CDR для обработки
+	private $skip_first_rows; // Пропускать строки вначе файла
 
-	private $src_cnf;
-	private $raw_dir;
-	private $pattern_files;
-	private $files           = [];
-	private $skip_first_rows;
-	private $cdr_flow;        // obj CDR
-
-	private $dublicates = [];
-	private $dublicates_limit = 100;
+	// Обнаружение повторяющихся CDR записей и вывод в лог
+	private $dublicates = [];        // Массив последних обработанных CDR
+	private $dublicates_limit = 100; // Хранить последних N записей
 
 	private $conf_params = [
 		'raw_dir',
@@ -23,12 +22,12 @@ class Source
 		'skip_first_rows',
 	];
 
-	public function __construct(array $src_conf, $time_day, Collector $collector)
+	public function __construct(array $src_conf, Collector $collector)
 	{
-		$this->set_params($src_conf);
+		$this->setParams($src_conf);
 		$this->collector = $collector;
 		$this->cdr_flow  = new CDRFlow($this->src_cnf);
-		$this->files     = $this->files($this->raw_dir, $this->pattern_files, $time_day);
+		$this->files     = $this->listFiles();
 	}
 
 	public function convAllFiles()
@@ -48,7 +47,7 @@ class Source
 	protected function _convFile($f)
 	{
 		$ret = [];
-		if ( ! $this->valid_file($f))
+		if ( ! $this->validFile($f))
 			return $ret;
 
 		$cdr = $this->cdr_flow;
@@ -60,8 +59,7 @@ class Source
 		foreach (file($f) as $ind => $raw_string)
 		{
 			$num = $ind+1;
-			// TODO добавить проверку $this->skip_first_rows и пропускать
-			// и создать методы для ее установки
+			// Пропустить строки вначале файла
 			if ( ! empty($this->skip_first_rows) AND $num <= $this->skip_first_rows)
 				continue;
 
@@ -76,14 +74,15 @@ class Source
 			// Пропускаем нулевую длительность
 			if ($cdr->isSkipped() === TRUE)
 			{
-				$cdr_str = implode('; ', $cdr_arr);
-				Log::instance()->debug("Skip string #{$num}: {$cdr_str}. Established via: {$cdr->getSkipFunction()}. ");
+				$cdr_str   = $cdr->getAsString();
+				$skip_func = $cdr->getSkipFunction();
+				Log::instance()->debug("Skip string #{$num}: {$cdr_str}. Established via: {$skip_func}. ");
 				$skipped++;
 				continue;
 			}
 
-			// Если запись дублируется
-			$this->is_dublicate($num, $cdr_arr);
+			// Если запись дублируется, пишем в лог сообщение
+			$this->isDublicate($cdr);
 			// Добавляем обработанную запись в коллектор
 			$this->collector->add($cdr);
 		}
@@ -91,19 +90,17 @@ class Source
 		return TRUE;
 	}
 
-	protected function is_dublicate($num_str, $c)
+	protected function isDublicate(CDRFlow $cdr_flow)
 	{
-		$i = ['datet', 'duration', 'A164', 'B164'];
+		$i       = ['datet', 'duration', 'A164', 'B164'];
+		$c       = $cdr_flow->get();
+		$num_str = $cdr_flow->getNumStr();
 		if (isset($this->dublicates[$c[$i[0]]][$c[$i[1]]][$c[$i[2]]][$c[$i[3]]]))
 		{
-			$vals = $this->dublicates[$c[$i[0]]][$c[$i[1]]][$c[$i[2]]][$c[$i[3]]];
-			foreach ($i as $ind)
-				$params[] = $c[$ind];
-			$params[] = $c['port_from'];
-			$params[] = $c['port_to'];
-			$str_p = implode('; ', $params);
+			$vals           = $this->dublicates[$c[$i[0]]][$c[$i[1]]][$c[$i[2]]][$c[$i[3]]];
+			$cdr_str        = $cdr_flow->getAsString();
 			$dublicated_str = implode(', ', $vals);
-			Log::instance()->warning("CDR #{$num_str} is dublicated CDR(s) #{$dublicated_str} ({$str_p})");
+			Log::instance()->warning("CDR #{$num_str} is dublicated CDR(s) #{$dublicated_str} ({$cdr_str})");
 			$this->dublicates[$c[$i[0]]][$c[$i[1]]][$c[$i[2]]][$c[$i[3]]][] = $num_str;
 			return TRUE;
 		}
@@ -112,12 +109,12 @@ class Source
 		return FALSE;
 	}
 
-	protected function files($dir, $pattern, $time_day)
+	protected function listFiles()
 	{
-		return glob($dir.date($pattern, $time_day));
+		return glob($this->raw_dir.date($this->pattern_files, Parser::timeDay()));
 	}
 
-	protected function valid_file($file_name)
+	protected function validFile($file_name)
 	{
 		// 1. Права на чтение
 		if ( ! is_readable($file_name))
@@ -134,7 +131,7 @@ class Source
 		return TRUE;
 	}
 
-	protected function set_params($arr)
+	protected function setParams($arr)
 	{
 		$this->src_cnf = $arr;
 		foreach ($this->conf_params as $param)

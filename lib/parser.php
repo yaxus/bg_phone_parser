@@ -35,12 +35,11 @@ elseif ( ! file_exists(CONFPATH))
 // Set Config object
 Cnf::init(CONFPATH);
 
-
-
 // Set Log object
 // Katzgrau\KLogger (PSR-3)
 Log::init(DOCROOT.Cnf::get('log_dir'), Cnf::get('log_level'));
 
+// Set Timezone
 $tz = Cnf::get('timezone');
 if ( ! empty($tz))
 	date_default_timezone_set(Cnf::get('timezone'));

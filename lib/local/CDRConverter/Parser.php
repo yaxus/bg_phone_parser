@@ -5,10 +5,11 @@ defined('CONFPATH') or die('No direct script access.');
 class Parser
 {
 	// Не посылается команда в биллинг на загрузку CDR
-	// TODO Изменить на $send_command
-	private $debug = FALSE;
+	// TODO Изменить на $send_command_on_bg
+	private $send_command_on_bg = FALSE;
 
-	private $time_day;
+	private static $time_day;
+	private static $time_day_end;
 	//private $raw_files     = [];
 	
 	private $bg_source_id;
@@ -23,7 +24,7 @@ class Parser
 		'bg_source_id',
 		'bg_stream_socket',
 		'conv_dir',
-		'debug',
+		'send_command_on_bg',
 	];
 
 	private $sources       = [];
@@ -59,15 +60,16 @@ class Parser
 			Log::instance()->info("Remove all errors...");
 			return FALSE;
 		}
-		$this->time_day = strtotime($date);
+		self::$time_day     = strtotime($date);
+		self::$time_day_end = self::$time_day + 86400;
 
 
 		Log::instance()->debug("Start CDR coverter process.");
 
-		$collector = Collector::init($this->time_day);
+		$collector = Collector::init();
 		foreach ($this->sources as $src_cfg)
 		{
-			$source = new Source($src_cfg, $this->time_day, $collector);
+			$source = new Source($src_cfg, $collector);
 			$source->convAllFiles();
 		}
 		//var_dump($collector); exit;
@@ -78,16 +80,17 @@ class Parser
 		if ($zip_status === TRUE)
 		{
 			// Сообщаем серверу биллинга, что можно забирать CDR'ы
-			return $this->send_command_load($this->time_day);
+			return $this->send_command_load();
 		}
 		return FALSE;
 	}
 	
-	protected function send_command_load($time_day)
+	// TODO отправлять только те, которые есть
+	protected function send_command_load()
 	{
-		if ($this->debug)
+		if ($this->send_command_on_bg)
 			return FALSE;
-		$load_date = date("Y-m-d", $time_day);
+		$load_date = date("Y-m-d", self::$time_day);
 		for ($h=0;$h<24;$h++)
 		{
 			$fp = stream_socket_client($this->bg_stream_socket, $errno, $errstr, 3);
@@ -115,10 +118,11 @@ class Parser
 		return TRUE;
 	}
 
+	// TODO архивировать только те, которые не пустые
 	protected function zipping($conv_dir, $data)
 	{
 		// создаем директорию для файлов ZIP
-		$dir = $conv_dir.date("Y/m/", $this->time_day);
+		$dir = $conv_dir.date("Y/m/", self::$time_day);
 		if ( ! file_exists($dir) AND ! mkdir($dir, 0755, TRUE))
 		{
 			Log::instance()->error("Not create directory: {$dir}.");
@@ -131,7 +135,7 @@ class Parser
 		// объект для создания арховов ZIP
 		$zip = new \ZipArchive();
 		
-		$day = date("j", $this->time_day);
+		$day = date("j", self::$time_day);
 		foreach ($data as $hour => $arr_data)
 		{
 			$name = sprintf('%1$02d_%2$02d', $day, $hour);
@@ -145,6 +149,16 @@ class Parser
 			$zip->close();
 		}
 		return TRUE;
+	}
+
+	public static function timeDay()
+	{
+		return self::$time_day;
+	}
+
+	public static function timeDayEnd()
+	{
+		return self::$time_day_end;
 	}
 
 }
