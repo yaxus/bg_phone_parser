@@ -1,6 +1,8 @@
-<?php namespace local; defined('CONFPATH') or die('No direct script access.');
+<?php namespace local\CDRConverter;
 
-class CDRConverter_CDR
+defined('CONFPATH') or die('No direct script access.');
+
+class CDRFlow
 {
 	private   $converter;                     // Объект конвертера
 
@@ -60,11 +62,12 @@ class CDRConverter_CDR
 		$this->raw_delimiter = $conf['delimiter'];
 		$this->val_indexes   = $conf['indexes'];
 		$this->setCountRaw($conf['raw_count']);
+		// TODO валидация
 		$this->setConverter(new $conf['obj_converter']);
 		//var_dump($this->raw_count); exit;
 	}
 
-	public function setConverter(CDRConverter_Converter $converter)
+	public function setConverter(Converter $converter)
 	{
 		$this->converter = $converter;
 	}
@@ -79,8 +82,6 @@ class CDRConverter_CDR
 
 	public function setNumStr($num)
 	{
-		if ( ! is_int($num))
-			return FALSE;
 		$this->num_str = $num;
 		return TRUE;
 	}
@@ -98,11 +99,11 @@ class CDRConverter_CDR
 	public function conv($row)
 	{
 		$this->init_new_cdr();
-		if ( ! $this->_rawLoad($row) OR ! $this->converter instanceof CDRConverter_Converter)
+		// TODO залогировать
+		if ( ! $this->_rawLoad($row) OR ! $this->converter instanceof Converter)
 			return FALSE;
 		$this->base_init();
-		$this->converter->convert($this);
-		return $this->get();
+		return $this->converter->convert($this);
 	}
 
 	private function init_new_cdr()
@@ -114,6 +115,7 @@ class CDRConverter_CDR
 		$this->skip_function    = '';
 		$this->val_other        = [];
 		$this->num_str          = 0;
+
 	}
 
 	/**
@@ -161,8 +163,37 @@ class CDRConverter_CDR
 			return $this->is_skipped;
 	}
 
+
 	/**
-	 * Значение обработанного поля
+	 * Установка флага "Перенаправленный вызов"
+	 *
+	 * @param null $bool
+	 *
+	 * @return bool
+	 */
+	public function isRedirected($bool = NULL)
+	{
+		if (is_bool($bool))
+			$this->is_redirected = $bool;
+		return $this->is_redirected;
+	}
+
+	/**
+	 * Установка флага "Международный вызов"
+	 *
+	 * @param null $bool
+	 *
+	 * @return bool
+	 */
+	public function isInternational($bool = NULL)
+	{
+		if (is_bool($bool))
+			$this->is_international = $bool;
+		return $this->is_international;
+	}
+
+	/**
+	 * Значение обработанного поля или все значения
 	 *
 	 * @param null $field
 	 *
@@ -196,7 +227,7 @@ class CDRConverter_CDR
 	 * Время записи CDR в Unix формате
 	 * @return int
 	 */
-	public function time()
+	public function getTime()
 	{
 		return $this->val_time;
 	}
@@ -242,34 +273,6 @@ class CDRConverter_CDR
 
 	// complete
 
-	public static function num2e164($string)
-	{
-		if (empty($string))
-			return '';
-		$string = preg_replace('/[^\d]/', '', $string);
-
-		$len = strlen($string);
-		// TODO Код города 495 вынести в конфиг
-		switch ($len)
-		{
-			case 2: case 3: case 7:
-			return '7495'.$string;
-			case 10:
-				return '7'.$string;
-			case 11:
-				return preg_replace("/^8(\d{10})$/", "7$1", $string);
-			default:
-				return static::trim_810($string);
-		}
-	}
-
-	public static function trim_810($string)
-	{
-		return (strlen($string) > 11 AND substr($string, 0, 3) === '810')
-			? substr($string, 3)
-			: $string;
-	}
-
 	public function getRaw($index)
 	{
 		$a = $this->raw_arr;
@@ -282,14 +285,14 @@ class CDRConverter_CDR
 	{
 		if (isset($this->val[$field]))
 			$this->val[$field] = $val;
-		return FALSE;
+		return NULL;
 	}
 
 	public function __get($field)
 	{
 		if (isset($this->val[$field]))
 			return $this->val[$field];
-		return FALSE;
+		return NULL;
 	}
 
 	public function __isset	($field)

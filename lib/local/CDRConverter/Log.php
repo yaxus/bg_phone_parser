@@ -1,7 +1,8 @@
-<?php namespace local; defined('CONFPATH') or die('No direct script access.');
-
+<?php namespace local\CDRConverter;
 use Katzgrau\KLogger\Logger;
 use Psr\Log\LogLevel;
+
+defined('CONFPATH') or die('No direct script access.');
 
 class Log
 {
@@ -9,7 +10,7 @@ class Log
 	protected static $dir   = 'logs';
 	protected static $level = LogLevel::DEBUG;
 
-	public function __construct($dir = NULL, $level = NULL)
+	public static function init($dir = NULL, $level = NULL)
 	{
 		if ( ! empty($dir))
 			self::$dir = $dir;
@@ -18,7 +19,7 @@ class Log
 			$lev = strtoupper($level);
 			self::$level = constant("Psr\Log\LogLevel::{$lev}");
 		}
-		$this->_instance();
+		self::instance();
 	}
 
 	public static function instance()

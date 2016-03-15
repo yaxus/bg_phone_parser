@@ -2,6 +2,10 @@
 
 namespace local;
 
+use local\CDRConverter\Parser;
+use local\CDRConverter\Cnf;
+use local\CDRConverter\Log;
+
 /**
  * Èíèöèèğîâàíèå ïğîöåññà îáğàáîòêè CDR èç êîììàíäíîé ñòğîêè.
  * Ôàéë äîëæåí áûòü ïîäêëş÷åí ñ ïîìîùüş êîíñòğóêöèè include/require.
@@ -24,12 +28,27 @@ if (realpath($_SERVER['SCRIPT_NAME']) === realpath(__FILE__))
 }
 elseif ( ! file_exists(CONFPATH))
 {
-	echo 'set file '.DOCROOT.'conf.php and set it up'.PHP_EOL;
+	echo 'create file '.CONFPATH.' and set it up'.PHP_EOL;
 	return;
 }
 
+// Set Config object
 Cnf::init(CONFPATH);
-date_default_timezone_set(Cnf::get('timezone'));
+
+
+
+// Set Log object
+// Katzgrau\KLogger (PSR-3)
+Log::init(DOCROOT.Cnf::get('log_dir'), Cnf::get('log_level'));
+
+$tz = Cnf::get('timezone');
+if ( ! empty($tz))
+	date_default_timezone_set(Cnf::get('timezone'));
+else
+{
+	echo 'set the timezone at the config file: '.CONFPATH.PHP_EOL;
+	return;
+}
 
 $o          = getopt('y:m:d:c:t::h::');
 $time_today = mktime(0,0,0);
@@ -50,8 +69,8 @@ if (isset($o['h']))
 }
 elseif(isset($o['t']))
 {   // today
-	$converter = new CDRConverter_Parser(Cnf::get());
-	$converter->treat(date(Cnf::get('date_frmt'), $time_today));
+	$parser = new Parser(Cnf::get());
+	$parser->treat(date(Cnf::get('date_frmt'), $time_today));
 	return;
 }
 elseif ( ! empty($o['y']) AND ! empty($o['m']))
@@ -81,10 +100,6 @@ $y = date('Y', $time_start);
 $m = date('n', $time_start);
 $d = date('j', $time_start)+$period_try;
 
-// set Log object
-// Katzgrau\KLogger (PSR-3)
-new Log(DOCROOT.Cnf::get('log_dir'), Cnf::get('log_level'));
-
 // set PipeFile object
 $processed_pipe = new PipeFile(DOCROOT.Cnf::get('processed_files')['file_name']);
 $processed_pipe->set_quantity_rows(Cnf::get('processed_files')['count_history']);
@@ -92,10 +107,10 @@ $pipe_data = $processed_pipe->get_data();
 
 for ($i = $period_try; $i >= 1; $i--)
 {
-	$date      = date('Y-m-d', mktime(0,0,0, $m, $d-$i, $y));
-	$converter = new CDRConverter_Converter(Cnf::get());
+	$date   = date('Y-m-d', mktime(0,0,0, $m, $d-$i, $y));
+	$parser = new Parser((array) Cnf::get());
 	if (isset($check_pipe) AND $check_pipe != FALSE AND in_array($date, $pipe_data))
 		continue;
-	if ($converter->treat($date))
+	if ($parser->treat($date))
 		$processed_pipe->add_data($date);
 }

@@ -1,24 +1,22 @@
-<?php
-
-namespace local;
+<?php namespace local\CDRConverter;
 
 defined('CONFPATH') or die('No direct script access.');
 
-class CDRConverter_Converter
+class Converter
 {
 	protected $cdr;
 	protected $val_other;
-	// ôóíêöèè ïðåîáðàçîâàíèé CDR
+	// Ñ„ÑƒÐ½ÐºÑ†Ð¸Ð¸ Ð¿Ñ€ÐµÐ¾Ð±Ñ€Ð°Ð·Ð¾Ð²Ð°Ð½Ð¸Ð¹ CDR
 	protected $conv_func   = [
 		'nums2e164',
 	];
-	private   $break_conv;                    // Ïðåðâàòü ïðîöåññ êîíâåðòàöèè CDR
+	private   $break_conv;                    // ÐŸÑ€ÐµÑ€Ð²Ð°Ñ‚ÑŒ Ð¿Ñ€Ð¾Ñ†ÐµÑÑ ÐºÐ¾Ð½Ð²ÐµÑ€Ñ‚Ð°Ñ†Ð¸Ð¸ CDR
 
-	public function convert(CDRConverter_CDR $cdr)
+	public function convert(CDRFlow $cdr)
 	{
 		$this->cdr = $cdr;
 		if ($this->_converting())
-			return $this->val;
+			return TRUE;
 		Log::instance()->error("Not valid string: #{$this->cdr->getNumStr()} in file: {$this->cdr->getFileName()}.");
 		return FALSE;
 	}
@@ -69,20 +67,34 @@ class CDRConverter_Converter
 	{
 		if ( ! in_array($num_type, ['A', 'B']))
 			return FALSE;
-		$this->{$num_type.'164'} = CDRConverter_CDR::num2e164($this->{$num_type});
+		$this->cdr->{$num_type.'164'} = self::num2e164($this->cdr->{$num_type});
 	}
 
-	public function __set($field, $val)
+	public static function num2e164($string)
 	{
-		if (isset($this->{$field}))
-			$this->val{$field} = $val;
-		return FALSE;
+		if (empty($string))
+			return '';
+		$string = preg_replace('/[^\d]/', '', $string);
+
+		$len = strlen($string);
+		// TODO ÐšÐ¾Ð´ Ð³Ð¾Ñ€Ð¾Ð´Ð° 495 Ð²Ñ‹Ð½ÐµÑÑ‚Ð¸ Ð² ÐºÐ¾Ð½Ñ„Ð¸Ð³
+		switch ($len)
+		{
+			case 2: case 3: case 7:
+			return '7495'.$string;
+			case 10:
+				return '7'.$string;
+			case 11:
+				return preg_replace("/^8(\d{10})$/", "7$1", $string);
+			default:
+				return self::trim_810($string);
+		}
 	}
 
-	public function __get($field)
+	public static function trim_810($string)
 	{
-		if (isset($this->{$field}))
-			return $this->{$field};
-		return FALSE;
+		return (strlen($string) > 11 AND substr($string, 0, 3) === '810')
+			? substr($string, 3)
+			: $string;
 	}
 }

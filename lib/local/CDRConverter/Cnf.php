@@ -1,6 +1,6 @@
 <?php
 
-namespace local;
+namespace local\CDRConverter;
 
 class Cnf
 {
@@ -8,7 +8,6 @@ class Cnf
 
 	private function __construct(){return FALSE;}
 	private function __clone()    {return FALSE;}
-	public  function __wakeup()   {return FALSE;}
 
 	public static function init($file)
 	{

@@ -19,7 +19,7 @@ class ConvRTU extends ConvUNIAbstract
 		'combination_nums', // запись номера с префиксом оператора с которого пришев вызов
 	];
 
-	protected $term_alias = [
+	protected $port2index = [
 		// Outer
 		'80.75.130.132'  => 4,  // calls not found 2014-11-18
 		'80.75.130.143'  => 4,  // calls started from 2014-11-24
@@ -35,7 +35,7 @@ class ConvRTU extends ConvUNIAbstract
 	protected function substitution()
 	{
 		// Подмена А номера
-		$a_num = $this->A;
+		$a_num = $this->cdr->A;
 		if (empty($a_num))
 			$this->A = 0;
 		// ЧР-Информ, ДальСатКом и ГПНШ
@@ -49,61 +49,61 @@ class ConvRTU extends ConvUNIAbstract
 
 	protected function redirected_nums()
 	{
-		$redir = $this->cdr->getRaw(14);
-		if (empty($redir))
+		$redir_num = $this->cdr->getRaw(14);
+		if (empty($redir_num))
 			return TRUE;
-		$this->redir_status === TRUE;
+		$this->cdr->isRedirected(TRUE);
 		// Исходящий переадресующий номер
-		if (strlen($redir) != 10)
+		if (strlen($redir_num) != 10)
 		{
-			Log::instance()->error("Redirected number: {$redir} must be 10 characters. File string number #".$this->file_num_str());
+			Log::instance()->error("Redirected number: {$redir_num} must be 10 characters. File string number #".$this->cdr->getNumStr());
 			return FALSE;
 		}
-		$this->A = $redir;
+		$this->cdr->A = $redir_num;
 	}
 
 	protected function dn_numbers()
 	{
-		if ($this->redir_status === TRUE)
+		if ($this->cdr->isRedirected() === TRUE)
 			return TRUE;
-		$a_num = $this->A;
+		$a_num = $this->cdr->A;
 		if (preg_match("/^\d?(49[589]\d{7})(\d+)$/", $a_num, $mch))
 		{
-			$this->A = $mch[1];
+			$this->cdr->A = $mch[1];
 			$this->val_other['num_dn'] = $mch[2];
 		}
 		elseif (preg_match("/^\d{4,6}$/", $a_num))
 		{
 			$this->val_other['num_dn'] = $a_num;
-			$this->A = static::num2e164($this->raw_arr[11]); // Исходящий А-номер (НЕ поле для биллинга)
+			$this->cdr->A = static::num2e164($this->cdr->getRaw(11)); // Исходящий А-номер (НЕ поле для биллинга)
 		}
 
 	}
 
 	protected function trim_B_88_89()
 	{
-		$b_num = $this->B;
+		$b_num = $this->cdr->B;
 		if (strlen($b_num) > 11 AND (substr($b_num, 0, 2) == '88' OR substr($b_num, 0, 2) == '89'))
-			$this->B = substr($b_num, 0, 11);
+			$this->cdr->B = substr($b_num, 0, 11);
 	}
 
 	// Номера сравниваются с полем "Исходящий А-номер" (не для биллинга)
 	// Сделано для номеров, к которым добавлен внутренний номер
 	protected function a_num2port()
 	{
-		if ( ! preg_match("/^\d?(49[589]\d{7})\d*$/", $this->raw_arr[11], $mch)) // Исходящий А-номер (НЕ поле для биллинга)
+		if ( ! preg_match("/^\d?(49[589]\d{7})\d*$/", $this->cdr->getRaw(11), $mch)) // Исходящий А-номер (НЕ поле для биллинга)
 			return TRUE;
 		$a_num = '7'.$mch[1];
 		if ( ! empty($this->a_num2port[$a_num]))
-			$this->port_from = $this->trunk_indexes[$this->a_num2port[$a_num]];
+			$this->cdr->port_from = $this->trunk_indexes[$this->a_num2port[$a_num]];
 	}
 
 	protected function not_skip_cdr_int_nums()
 	{
-		if ($this->cdr->time() > mktime(0,0,0,10,23,2015))
+		if ($this->cdr->getTime() > mktime(0,0,0,10,23,2015))
 			return TRUE;
-		if (in_array($this->port_from, array('@Avtosnabjenets', '@Neftegarant')))
-			$this->is_skipped(FALSE);
+		if (in_array($this->cdr->port_from, array('@Avtosnabjenets', '@Neftegarant')))
+			$this->cdr->isSkipped(FALSE);
 	}
 
 }

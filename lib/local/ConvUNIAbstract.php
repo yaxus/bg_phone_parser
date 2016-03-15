@@ -1,10 +1,16 @@
-<?php namespace local; defined('CONFPATH') or die('No direct script access.');
+<?php namespace local;
+use local\CDRConverter\Converter;
+use local\CDRConverter\Log;
+use local\CDRConverter\Cnf;
 
-abstract class ConvUNIAbstract extends CDRConverter_Converter
+defined('CONFPATH') or die('No direct script access.');
+
+abstract class ConvUNIAbstract extends Converter
 {
 	protected $delim_nums = '&';
 	protected $dn_in_a164 = TRUE;
 	protected $port_pref  = '?';
+	protected $port2index = [];
 
 	protected $trunk_indexes = [];
 
@@ -22,7 +28,7 @@ abstract class ConvUNIAbstract extends CDRConverter_Converter
 		$this->set_trunk_indexes();
 	}
 
-	public function set_trunk_indexes()
+	protected function set_trunk_indexes()
 	{
 		$arr = Cnf::get('trunk_indexes');
 		if (! empty($arr))
@@ -34,23 +40,23 @@ abstract class ConvUNIAbstract extends CDRConverter_Converter
 	protected function port2str()
 	{
 		foreach (['port_from', 'port_to'] AS $port_type)
-			$this->set_port($port_type, $this->{$port_type});
+			$this->set_port($port_type, $this->cdr->{$port_type});
 	}
 
 	protected function set_port($port_type, $port_val)
 	{
 		$tp = $this->port_pref;
 		//var_dump($this->term_alias, $port_val); exit;
-		if (isset($this->term_alias[$port_val]))
+		if (isset($this->port2index[$port_val]))
 		{
-			$key = $this->term_alias[$port_val];
-			$this->$port_type = $this->trunk_indexes[$key];
+			$key = $this->port2index[$port_val];
+			$this->cdr->$port_type = $this->trunk_indexes[$key];
 			$this->val_other[$port_type.'_key'] = $key;
 			$this->val_other[$port_type.'_pref'] = $tp.str_pad($key, 2, '0', STR_PAD_LEFT);
 		}
 		else
 		{
-			$this->$port_type = '_Undef';
+			$this->cdr->$port_type = '_Undef';
 			$this->val_other[$port_type.'_key'] = 0;
 			$this->val_other[$port_type.'_pref'] = $tp.'__';
 		}
@@ -66,7 +72,7 @@ abstract class ConvUNIAbstract extends CDRConverter_Converter
 
 	protected function skip_zero_dur()
 	{
-		// TODO îïèñàòü ïğîöåäóğó
+		// TODO Ğ¾Ğ¿Ğ¸ÑĞ°Ñ‚ÑŒ Ğ¿Ñ€Ğ¾Ñ†ĞµĞ´ÑƒÑ€Ñƒ
 	}
 
 	protected function skip_inner_calls()
@@ -77,15 +83,15 @@ abstract class ConvUNIAbstract extends CDRConverter_Converter
 
 	protected function combination_nums()
 	{
-		$a_num = [$this->val_other['port_from_pref'], $this->A];
+		$a_num = [$this->val_other['port_from_pref'], $this->cdr->A];
 		if ( ! empty($this->val_other['num_dn']))
 		{
 			$a_num[] = $this->val_other['num_dn'];
 			if ($this->dn_in_a164)
-				$this->A164 = implode($this->delim_nums, [$this->A164, $this->val_other['num_dn']]);
+				$this->cdr->A164 = implode($this->delim_nums, [$this->cdr->A164, $this->val_other['num_dn']]);
 		}
-		$b_num = [$this->val_other['port_to_pref'], $this->B];
-		$this->A = implode($this->delim_nums, $a_num);
-		$this->B = implode($this->delim_nums, $b_num);
+		$b_num = [$this->val_other['port_to_pref'], $this->cdr->B];
+		$this->cdr->A = implode($this->delim_nums, $a_num);
+		$this->cdr->B = implode($this->delim_nums, $b_num);
 	}
 }

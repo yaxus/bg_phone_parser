@@ -1,59 +1,37 @@
-<?php
-
-namespace local;
-
-use ZipArchive;
+<?php namespace local\CDRConverter;
 
 defined('CONFPATH') or die('No direct script access.');
 
-class CDRConverter_Parser
+class Parser
 {
 	// Не посылается команда в биллинг на загрузку CDR
 	// TODO Изменить на $send_command
 	private $debug = FALSE;
 
-	private $time_day_start;
-	private $time_day_end;
-	private $raw_files     = [];
+	private $time_day;
+	//private $raw_files     = [];
 	
 	private $bg_source_id;
 	private $bg_stream_socket;
 	private $conv_dir;
-	private $skip_zero_dur = TRUE;
-	private $trunk_indexes;
-	private $dublicates = [];
-	private $dublicates_limit = 100;
-
-	private $cdr_data      = []; // for zipping
-
+	private $cdr_data;
+	//private $skip_zero_dur = TRUE;
+	//private $trunk_indexes;
 
 	private $isset_err     = FALSE;
 	private $conf_params   = [
 		'bg_source_id',
 		'bg_stream_socket',
 		'conv_dir',
-		'skip_zero_dur',
-		'trunk_indexes',
 		'debug',
 	];
-
-	// TODO -> Source
-	//private $source_params = [
-	//	'raw_dir',
-	//	'pattern_files',
-	//	'skip_first_rows',
-
-	//	'obj_converter',
-	//	'count_raw',
-	//	'delimiter',
-	//	'indexes',
-	//];
 
 	private $sources       = [];
 
 
 	public function __construct(array $conf)
 	{
+		//var_dump(__FUNCTION__); exit;
 		$this->set_params($conf);
 
 		if ( ! isset($conf['sources']) OR ! is_array($conf['sources']))
@@ -74,22 +52,6 @@ class CDRConverter_Parser
 				$this->{$param} = $arr[$param];
 	}
 
-	//protected function set_source_params($arr, $key_source = 0)
-	//{
-	//	$src = [];
-	//	foreach ($this->source_params as $param)
-	//	{
-	//		if (empty($arr[$param]))
-	//		{
-	//			Log::instance()->error("Source parameter #{$key_source}: {$param} is not set.");
-	//			$this->isset_err = TRUE;
-	//		}
-	//		else
-	//			$src[$param] = $arr[$param];
-	//	}
-	//	$this->sources[$key_source] = $src;
-	//}
-
 	public function treat($date)
 	{
 		if ($this->isset_err)
@@ -97,52 +59,30 @@ class CDRConverter_Parser
 			Log::instance()->info("Remove all errors...");
 			return FALSE;
 		}
-		$this->time_day_start = strtotime($date);
-		$this->time_day_end   = $this->time_day_start + 86400;
+		$this->time_day = strtotime($date);
+
 
 		Log::instance()->debug("Start CDR coverter process.");
-		$this->cdr_data = array_fill(0, 24, array());
 
+		$collector = Collector::init($this->time_day);
 		foreach ($this->sources as $src_cfg)
 		{
-			//$this->treat_source($src_cfg);
-			$source = new CDRConverter_Source($src_cfg, $this->time_day_start);
-			$source->exec();
+			$source = new Source($src_cfg, $this->time_day, $collector);
+			$source->convAllFiles();
 		}
+		//var_dump($collector); exit;
 
 		Log::instance()->debug("End CDR coverter process.");
 
-		$zip_status = $this->zipping($this->conv_dir, $this->cdr_data);
+		$zip_status = $this->zipping($this->conv_dir, $collector->getData());
 		if ($zip_status === TRUE)
 		{
 			// Сообщаем серверу биллинга, что можно забирать CDR'ы
-			return $this->send_command_load($this->time_day_start);
+			return $this->send_command_load($this->time_day);
 		}
 		return FALSE;
 	}
 	
-	protected function is_dublicate($num_str, $c)
-	{
-		$i = ['datet', 'duration', 'A164', 'B164'];
-		if (isset($this->dublicates[$c[$i[0]]][$c[$i[1]]][$c[$i[2]]][$c[$i[3]]]))
-		{
-			$vals = $this->dublicates[$c[$i[0]]][$c[$i[1]]][$c[$i[2]]][$c[$i[3]]];
-			foreach ($i as $ind)
-				$params[] = $c[$ind];
-			$params[] = $c['port_from'];
-			$params[] = $c['port_to'];
-			$str_p = implode('; ', $params);
-			$dublicated_str = implode(', ', $vals);
-			Log::instance()->warning("CDR #{$num_str} is dublicated CDR #{$dublicated_str} ({$str_p})");
-			$this->dublicates[$c[$i[0]]][$c[$i[1]]][$c[$i[2]]][$c[$i[3]]][] = $num_str;
-			return TRUE;
-		}
-		$this->dublicates = array_slice($this->dublicates, -$this->dublicates_limit-1);
-		$this->dublicates[$c[$i[0]]][$c[$i[1]]][$c[$i[2]]][$c[$i[3]]][] = $num_str;
-		return FALSE;
-	}
-
-
 	protected function send_command_load($time_day)
 	{
 		if ($this->debug)
@@ -153,7 +93,7 @@ class CDRConverter_Parser
 			$fp = stream_socket_client($this->bg_stream_socket, $errno, $errstr, 3);
 			if (! $fp)
 			{
-				Log::instance()->error("$errstr ({$errno})");
+				Log::instance()->error("{$errstr} ({$errno})");
 				$err = TRUE;
 			}
 			else 
@@ -175,15 +115,10 @@ class CDRConverter_Parser
 		return TRUE;
 	}
 
-	// public function clear_raw_files()
-	// {
-	// 	$this->raw_files = array();
-	// }
-
 	protected function zipping($conv_dir, $data)
 	{
 		// создаем директорию для файлов ZIP
-		$dir = $conv_dir.date("Y/m/", $this->time_day_start);
+		$dir = $conv_dir.date("Y/m/", $this->time_day);
 		if ( ! file_exists($dir) AND ! mkdir($dir, 0755, TRUE))
 		{
 			Log::instance()->error("Not create directory: {$dir}.");
@@ -194,14 +129,14 @@ class CDRConverter_Parser
 		// array_map('unlink', glob($dir.'*.zip'));
 		
 		// объект для создания арховов ZIP
-		$zip = new ZipArchive();
+		$zip = new \ZipArchive();
 		
-		$day = date("j", $this->time_day_start);
+		$day = date("j", $this->time_day);
 		foreach ($data as $hour => $arr_data)
 		{
 			$name = sprintf('%1$02d_%2$02d', $day, $hour);
 			$file_zip = $dir.$name.'.zip';
-			if ( ! $zip->open($file_zip, ZIPARCHIVE::OVERWRITE))
+			if ( ! $zip->open($file_zip, \ZIPARCHIVE::OVERWRITE))
 			{
 			    Log::instance()->error("Not create zip archive: {$file_zip}.");
 			    return FALSE;
