@@ -12,6 +12,8 @@ class ConvSMG extends ConvUNIAbstract
 		'redirected_nums',
 		'dn_numbers',
 		'check_international',
+		//['_num2e164',['A']],
+		//['_num2e164',['B']],
 		'nums2e164',
 		'a_num2port',
 		'combination_nums',
@@ -77,14 +79,6 @@ class ConvSMG extends ConvUNIAbstract
 		if (substr($b_num_in, 0, 3) == '810')
 			$this->cdr->isInternational(TRUE);
 	}
-
-	//protected function num2e164_2()
-	//{
-	//	$this->A164 = $this->_num2e164($this->A);
-	//	$this->B164 = ($this->international !== TRUE)
-	//		? $this->_num2e164($this->val['B'])
-	//		: $this->val['B'];
-	//}
 
 	protected function a_num2port()
 	{

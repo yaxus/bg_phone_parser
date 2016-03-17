@@ -68,8 +68,8 @@ if (isset($o['h']))
 }
 elseif(isset($o['t']))
 {   // today
-	$parser = new Parser(Cnf::get());
-	$parser->treat(date(Cnf::get('date_frmt'), $time_today));
+	$parser = new Parser();
+	$parser->treat($time_today);
 	return;
 }
 elseif ( ! empty($o['y']) AND ! empty($o['m']))
@@ -106,7 +106,7 @@ $pipe_data = $processed_pipe->get_data();
 
 for ($i = $period_try; $i >= 1; $i--)
 {
-	$date   = date('Y-m-d', mktime(0,0,0, $m, $d-$i, $y));
+	$date   = mktime(0,0,0, $m, $d-$i, $y);
 	$parser = new Parser((array) Cnf::get());
 	if (isset($check_pipe) AND $check_pipe != FALSE AND in_array($date, $pipe_data))
 		continue;

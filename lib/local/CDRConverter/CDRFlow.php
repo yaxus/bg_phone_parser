@@ -11,7 +11,7 @@ class CDRFlow
 	// "сырые" данные
 	private   $raw_delimiter = ',';           // разделитель полей в "сырой" текстовой строке
 	private   $raw_min_count = 4;             // минимальное значение значений в строке
-	private   $raw_count     = [];            // допестимое кол-во значений в строке, может быть несколько значений
+	private   $raw_count     = [];            // допустимое кол-во значений в строке, может быть несколько значений
 	protected $raw_arr       = [];            // массив всех значений из строки
 
 	// преобразованные данные
@@ -19,7 +19,6 @@ class CDRFlow
 	private   $val           = [];            // поля со значениями для преобразования
 	private   $val_delimiter = "\t";          // разделитель полей в строке для биллинга
 	private   $val_indexes   = [];            // сопоставление полей индексам в строке
-	//protected $val_other     = [];            // другие поля для внутренних преобразований номеров
 	private   $val_fields    = [              // ассоциативные наименования полей
 		'datet',                              //   01. дата и время начала звонка (dd.MM.yyyy HH:mm:ss)
 		'duration',                           //   02. длительность звонка (секунды)
@@ -34,17 +33,14 @@ class CDRFlow
 		'coast',                              //   11. стоимость вызова
 	];
 
-	private   $file_name     = 'unknown file';
+	private   $file_name     = '';
 	private   $num_str       = 0;
 
 	protected $is_international;              // МН вызов
 	protected $is_redirected;                 // перенаправленый вызов
-	private   $is_skipped;                    // Пропустить запись
+	private   $is_skipped;                    // Пропустить вызов
 	private   $skip_function;                 // Функция через которую был установлен флаг "пропустить CDR"
 	private   $skip_zero_dur;                 // Пропускать с нулевой длительностью
-	// TODO -> Source
-	//private   $skip_count = 0;                // Количество пропущенных CDR
-
 
 	protected $empty_values = [
 		'none',
@@ -54,12 +50,11 @@ class CDRFlow
 
 	//abstract protected function redirected_nums();
 
-	// TODO через конфиг
 	public function __construct(array $conf)
 	{
-		$this->skip_zero_dur = Cnf::get('skip_zero_dur');
 		if (empty($conf))
 			return FALSE;
+		$this->skip_zero_dur = Cnf::get('skip_zero_dur');
 		$this->raw_delimiter = $conf['delimiter'];
 		$this->val_indexes   = $conf['indexes'];
 		$this->setCountRaw($conf['raw_count']);
@@ -83,6 +78,7 @@ class CDRFlow
 
 	public function setNumStr($num)
 	{
+		$this->clear_cdr();
 		$this->num_str = $num;
 		return TRUE;
 	}
@@ -99,23 +95,27 @@ class CDRFlow
 
 	public function conv($row)
 	{
-		$this->init_new_cdr();
+		$this->clear_cdr();
 		// TODO залогировать
 		if ( ! $this->_rawLoad($row) OR ! $this->converter instanceof Converter)
 			return FALSE;
 		$this->base_init();
+		if ($this->skip_zero_dur === TRUE AND $this->val['duration'] == 0)
+			$this->isSkipped(TRUE);
 		return $this->converter->convert($this);
 	}
 
-	private function init_new_cdr()
+	private function clear_cdr()
 	{
 		// TODO file_num_str устанавливать методом
 		$this->is_redirected    =
 		$this->is_international =
 		$this->is_skipped       = FALSE;
 		$this->skip_function    = '';
-		$this->val_other        = [];
-		$this->num_str          = 0;
+		$this->val_time         = NULL;
+		$this->raw_arr          =
+		$this->val              = [];
+		//$this->num_str          = 0;
 
 	}
 
@@ -265,16 +265,6 @@ class CDRFlow
 		$this->val['category'] = 0;
 		$this->val['coast']    = 0;
 	}
-
-	protected function skip_zero()
-	{
-		if ($this->skip_zero_dur === TRUE AND $this->val['duration'] == 0)
-			$this->isSkipped(TRUE);
-	}
-
-
-
-
 
 	// complete
 

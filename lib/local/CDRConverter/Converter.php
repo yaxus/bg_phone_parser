@@ -5,15 +5,20 @@ defined('CONFPATH') or die('No direct script access.');
 class Converter
 {
 	protected $cdr;
-	protected $val_other;
+	protected $val_other = [];
 	// функции преобразований CDR
-	protected $conv_func   = [
+	protected $conv_func = [
+		// Запись:
 		'nums2e164',
+		// аналогична записям (call_user_func_array())
+		//['_num2e164',['A']],
+		//['_num2e164',['B']],
 	];
 	private   $break_conv;                    // Прервать процесс конвертации CDR
 
 	public function convert(CDRFlow $cdr)
 	{
+		$this->val_other = [];
 		$this->cdr = $cdr;
 		if ($this->_converting())
 			return TRUE;
@@ -21,12 +26,8 @@ class Converter
 		return FALSE;
 	}
 
-
-	//
 	private function _converting()
 	{
-		//$this->base_init();
-		//$this->skip_zero();
 		if ( ! empty($this->conv_func))
 			foreach ($this->conv_func as $f)
 			{
@@ -48,7 +49,7 @@ class Converter
 				}
 				$ret = call_user_func_array($call_f, $call_p);
 				if ($ret === FALSE) {
-					Log::instance()->error("Function: {$f} returned FALSE.");
+					Log::instance()->error("Function: {$call_f[1]} returned FALSE.");
 					return FALSE;
 				}
 				elseif ($this->break_conv === TRUE)
