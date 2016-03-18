@@ -1,4 +1,7 @@
-<?php namespace local\CDRConverter;
+<?php
+
+namespace local\CDRConverter;
+
 use Katzgrau\KLogger\Logger;
 use Psr\Log\LogLevel;
 
@@ -17,7 +20,7 @@ class Log
 		if ( ! empty($level))
 		{
 			$lev = strtoupper($level);
-			self::$level = constant("Psr\Log\LogLevel::{$lev}");
+			self::$level = constant("\Psr\Log\LogLevel::{$lev}");
 		}
 		self::instance();
 	}

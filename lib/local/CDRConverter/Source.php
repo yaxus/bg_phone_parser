@@ -33,15 +33,24 @@ class Source
 	public function convAllFiles()
 	{
 		foreach ($this->files as $f)
-			$this->_convFile($f);
+			if ($this->cdr_flow->isBreakProcess() === TRUE)
+				return FALSE;
+			else
+				$this->_convFile($f);
 	}
 
 	public function convEachFile()
 	{
 		$e = each($this->files);
-		if (empty($e[1]))
+		if (empty($e[1]) OR $this->cdr_flow->isBreakProcess() === TRUE)
 			return FALSE;
 		return $this->_convFile(($e[1]));
+	}
+
+
+	protected function a111($f)
+	{
+		//
 	}
 
 	protected function _convFile($f)
@@ -126,7 +135,7 @@ class Source
 		// 2. Не пустой
 		elseif (filesize($file_name) == 0)
 		{
-			Log::instance()->warning("File: {$file_name} is empty.");
+			Log::instance()->info("File: {$file_name} is empty.");
 			return FALSE;
 		}
 		return TRUE;

@@ -54,7 +54,6 @@ class Parser
 			$source = new Source($src_cfg, $collector);
 			$source->convAllFiles();
 		}
-		//var_dump($collector); exit;
 
 		Log::instance()->debug("End CDR coverter process.");
 
@@ -126,14 +125,14 @@ class Parser
 	{
 		$load_date = date("Y-m-d", self::$time_day);
 
-		$fp = stream_socket_client($this->bg_stream_socket, $errno, $errstr, 3);
-		if (! $fp)
-		{
-			Log::instance()->error("{$errstr} ({$errno})");
-			return FALSE;
-		}
 		foreach ($collector->getData() as $h => $data)
 		{
+			$fp = stream_socket_client($this->bg_stream_socket, $errno, $errstr, 3);
+			if (! $fp)
+			{
+				Log::instance()->error("{$errstr} ({$errno})");
+				return FALSE;
+			}
 			$cmd = "load={$load_date}-{$h}-{$this->bg_source_id}\n";
 			if (fwrite($fp, $cmd))
 				Log::instance()->info("On the socket: {$this->bg_stream_socket} send command: ".trim($cmd));
@@ -142,8 +141,8 @@ class Parser
 				Log::instance()->error("Command is not send: ".trim($cmd));
 				$err = TRUE;
 			}
+			fclose($fp);
 		}
-		fclose($fp);
 		if ( ! empty($err))
 			return FALSE;
 		return TRUE;

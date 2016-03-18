@@ -5,6 +5,7 @@ namespace local;
 use local\CDRConverter\Parser;
 use local\CDRConverter\Cnf;
 use local\CDRConverter\Log;
+use Psr\Log\LogLevel;
 
 /**
  * Инициирование процесса обработки CDR из коммандной строки.
@@ -19,6 +20,7 @@ define('DOCROOT', realpath(dirname($_SERVER['SCRIPT_NAME'])).DIRECTORY_SEPARATOR
 define('CONFPATH', DOCROOT.'conf.php');
 define('LIBROOT', realpath(DOCROOT.'..').DIRECTORY_SEPARATOR.'lib'.DIRECTORY_SEPARATOR);
 require_once LIBROOT.'Autoloader.php';
+LogLevel::ALERT;
 
 if (realpath($_SERVER['SCRIPT_NAME']) === realpath(__FILE__))
 {

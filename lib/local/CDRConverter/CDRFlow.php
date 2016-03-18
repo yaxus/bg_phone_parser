@@ -16,9 +16,9 @@ class CDRFlow
 
 	// преобразованные данные
 	private   $val_time;                      // время записи CDR в unix формате
-	private   $val           = [];            // поля со значениями для преобразования
 	private   $val_delimiter = "\t";          // разделитель полей в строке для биллинга
 	private   $val_indexes   = [];            // сопоставление полей индексам в строке
+	private   $val           = [];            // поля со значениями для преобразования
 	private   $val_fields    = [              // ассоциативные наименования полей
 		'datet',                              //   01. дата и время начала звонка (dd.MM.yyyy HH:mm:ss)
 		'duration',                           //   02. длительность звонка (секунды)
@@ -47,6 +47,7 @@ class CDRFlow
 		'NULL',
 	];
 	private   $empty_val     = 0;             // нулевое значение поля
+	private   $break_process = FALSE;         // прервать процесс обработки
 
 	//abstract protected function redirected_nums();
 
@@ -58,22 +59,33 @@ class CDRFlow
 		$this->raw_delimiter = $conf['delimiter'];
 		$this->val_indexes   = $conf['indexes'];
 		$this->setCountRaw($conf['raw_count']);
-		// TODO валидация
-		$this->setConverter(new $conf['obj_converter']);
-		//var_dump($this->raw_count); exit;
+		$this->setConverter($conf['obj_converter']);
 	}
 
-	public function setConverter(Converter $converter)
+	public function setConverter($converter)
 	{
-		$this->converter = $converter;
+		if ( ! class_exists($converter)) {
+			Log::instance()->error("Converter: {$converter} can not be called.");
+			$this->break_process = TRUE;
+			return FALSE;
+		}
+
+		$this->converter = new $converter;
+
+		if ( ! $this->converter instanceof Converter)
+		{
+			Log::instance()->error("Converter: {$converter} can not be instance of the class Converter.");
+			$this->break_process = TRUE;
+			return FALSE;
+		}
+
 	}
 
 	public function setFile($file_name)
 	{
 		Log::instance()->info("File: {$file_name} in progress...");
 		$this->file_name    = $file_name;
-		$this->file_num_str = 0;
-		$this->skip_count   = 0;
+		$this->num_str      = 0;
 	}
 
 	public function setNumStr($num)
@@ -97,7 +109,7 @@ class CDRFlow
 	{
 		$this->clear_cdr();
 		// TODO залогировать
-		if ( ! $this->_rawLoad($row) OR ! $this->converter instanceof Converter)
+		if ( ! $this->_rawLoad($row))
 			return FALSE;
 		$this->base_init();
 		if ($this->skip_zero_dur === TRUE AND $this->val['duration'] == 0)
@@ -107,7 +119,6 @@ class CDRFlow
 
 	private function clear_cdr()
 	{
-		// TODO file_num_str устанавливать методом
 		$this->is_redirected    =
 		$this->is_international =
 		$this->is_skipped       = FALSE;
@@ -115,8 +126,6 @@ class CDRFlow
 		$this->val_time         = NULL;
 		$this->raw_arr          =
 		$this->val              = [];
-		//$this->num_str          = 0;
-
 	}
 
 	/**
@@ -164,7 +173,6 @@ class CDRFlow
 			return $this->is_skipped;
 	}
 
-
 	/**
 	 * Установка флага "Перенаправленный вызов"
 	 *
@@ -194,6 +202,14 @@ class CDRFlow
 	}
 
 	/**
+	 * @return boolean
+	 */
+	public function isBreakProcess()
+	{
+		return $this->break_process;
+	}
+
+	/**
 	 * Вернуть значение обработанного поля или все значения
 	 *
 	 * @param null $field
@@ -208,6 +224,7 @@ class CDRFlow
 			return $this->val[$field];
 		return FALSE;
 	}
+
 	public function getAsString()
 	{
 		return implode($this->val_delimiter, $this->val);
@@ -230,11 +247,20 @@ class CDRFlow
 
 	/**
 	 * Время записи CDR в Unix формате
+	 *
 	 * @return int
 	 */
 	public function getTime()
 	{
 		return $this->val_time;
+	}
+
+	public function getRaw($index)
+	{
+		$a = $this->raw_arr;
+		return ( ! empty($a[$index]) AND ! in_array($a[$index], $this->empty_values))
+			? $a[$index]
+			: $this->empty_val;
 	}
 
 	protected function setCountRaw($count)
@@ -264,16 +290,6 @@ class CDRFlow
 		$this->val['dur_oper'] = $this->val['duration'];
 		$this->val['category'] = 0;
 		$this->val['coast']    = 0;
-	}
-
-	// complete
-
-	public function getRaw($index)
-	{
-		$a = $this->raw_arr;
-		return ( ! empty($a[$index]) AND ! in_array($a[$index], $this->empty_values))
-			? $a[$index]
-			: $this->empty_val;
 	}
 
 	public function __set($field, $val)
