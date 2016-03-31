@@ -108,7 +108,6 @@ class CDRFlow
 	public function conv($row)
 	{
 		$this->clear_cdr();
-		// TODO залогировать
 		if ( ! $this->_rawLoad($row))
 			return FALSE;
 		$this->base_init();
@@ -282,9 +281,12 @@ class CDRFlow
 
 	protected function base_init()
 	{
-		// TODO добавить возможность комбинирования поля с временем из нескольких полей
-		$this->val_time        = strtotime($this->val['datet']);
-		$this->val['datet']    = date($this->datet_frmt, $this->val_time);
+		$time = strtotime($this->val['datet']);
+		if ($time > 31536000) // > 1971-01-01 00:00:00
+		{
+			$this->val_time        = $time;
+			$this->val['datet']    = date($this->datet_frmt, $this->val_time);
+		}
 		$dur                   = str_replace(',', '.', $this->val['duration']);
 		$this->val['duration'] = round($dur);
 		$this->val['dur_oper'] = $this->val['duration'];

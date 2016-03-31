@@ -47,12 +47,6 @@ class Source
 		return $this->_convFile(($e[1]));
 	}
 
-
-	protected function a111($f)
-	{
-		//
-	}
-
 	protected function _convFile($f)
 	{
 		$ret = [];

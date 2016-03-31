@@ -60,8 +60,10 @@ class Converter
 
 	protected function nums2e164()
 	{
-		foreach (['A', 'B'] AS $num_type)
-			$this->_num2e164($num_type);
+		//foreach (['A', 'B'] AS $num_type)
+		$this->_num2e164('A');
+		if ($this->cdr->isInternational() !== TRUE)
+			$this->_num2e164('B');
 	}
 
 	protected function _num2e164($num_type)
