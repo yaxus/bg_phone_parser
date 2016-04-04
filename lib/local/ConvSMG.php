@@ -77,7 +77,9 @@ class ConvSMG extends ConvUNIAbstract
 	{
 		$b_num_in = $this->cdr->getRaw(17); // Входящий B номер
 		if (substr($b_num_in, 0, 3) == '810')
+		{
 			$this->cdr->isInternational(TRUE);
+		}
 	}
 
 	protected function a_num2port()
