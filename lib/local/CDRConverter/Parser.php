@@ -110,7 +110,7 @@ class Parser
 		{
 			$name = sprintf('%1$02d_%2$02d', $day, $h);
 			$file_zip = $dir.$name.'.zip';
-			if ( ! $zip->open($file_zip, \ZIPARCHIVE::OVERWRITE))
+			if ( ! $zip->open($file_zip, \ZIPARCHIVE::CREATE | \ZIPARCHIVE::OVERWRITE))
 			{
 			    Log::instance()->error("Not create zip archive: {$file_zip}.");
 			    return FALSE;
