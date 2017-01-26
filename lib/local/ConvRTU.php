@@ -1,4 +1,8 @@
-<?php namespace local; defined('CONFPATH') or die('No direct script access.');
+<?php namespace local;
+
+use local\CDRConverter\Log;
+
+defined('CONFPATH') or die('No direct script access.');
 
 class ConvRTU extends ConvUNIAbstract
 {
