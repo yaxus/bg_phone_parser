@@ -1,4 +1,8 @@
-<?php namespace local; defined('CONFPATH') or die('No direct script access.');
+<?php namespace local;
+
+use local\CDRConverter\Log;
+
+defined('CONFPATH') or die('No direct script access.');
 
 class ConvSMG extends ConvUNIAbstract
 {
@@ -53,6 +57,7 @@ class ConvSMG extends ConvUNIAbstract
 		if (empty($redir_num))
 			return TRUE;
 		$this->cdr->isRedirected(TRUE);
+		// $this->port_is_outer('port_from')
 		// Исходящий переадресующий номер
 		$this->cdr->A = $redir_num;
 	}
