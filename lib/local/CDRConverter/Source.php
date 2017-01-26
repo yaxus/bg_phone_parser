@@ -72,8 +72,6 @@ class Source
 			else
 				continue;
 
-			$cdr_arr = $cdr->get();
-
 			// Пропускаем нулевую длительность
 			if ($cdr->isSkipped() === TRUE)
 			{
