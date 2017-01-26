@@ -77,9 +77,9 @@ class Converter
 
 	public static function num2e164($string)
 	{
-		if (empty($string))
-			return '';
 		$string = preg_replace('/[^\d]/', '', $string);
+		if (empty($string))
+			return $string;
 
 		$len = strlen($string);
 		// TODO Код города 495 вынести в конфиг
