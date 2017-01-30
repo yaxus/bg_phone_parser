@@ -60,7 +60,6 @@ class Converter
 
 	protected function nums2e164()
 	{
-		//foreach (['A', 'B'] AS $num_type)
 		$this->_num2e164('A');
 		if ($this->cdr->isInternational() !== TRUE)
 		{
@@ -77,22 +76,29 @@ class Converter
 
 	public static function num2e164($string)
 	{
-		$string = preg_replace('/[^\d]/', '', $string);
-		if (empty($string))
-			return $string;
+		$num = preg_replace('/[^\d]/', '', $string);
+		if (empty($num))
+			return $num;
 
-		$len = strlen($string);
+		$len = strlen($num);
 		// TODO Код города 495 вынести в конфиг
 		switch ($len)
 		{
-			case 2: case 3: case 7:
-			return '7495'.$string;
+			// Добавление "0" вначале для карты зон для объединения коротких номеров
+			case 2: case 3:
+				return '0'.$num;
+			// Московские номера без кода города
+			case 7:
+				return '7495'.$num;
+			// Номера без кода страны
 			case 10:
-				return '7'.$string;
+				return '7'.$num;
+			// Замена "8" на "7" вначале номера
 			case 11:
-				return preg_replace("/^8(\d{10})$/", "7$1", $string);
+				return preg_replace("/^8(\d{10})$/", "7$1", $num);
+			// Все остальное - международные вызовы
 			default:
-				return self::trim_810($string);
+				return self::trim_810($num);
 		}
 	}
 
